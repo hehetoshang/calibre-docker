@@ -39,26 +39,51 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     requests \
     beautifulsoup4
 
-# 根据架构安装 Calibre
+# 根据架构安装 Calibre - 修复 ARMv7 安装问题
 RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ]; then \
+        echo "Installing Calibre via apt for $TARGETARCH" && \
         apt-get update && \
         apt-get install -y calibre && \
         apt-get clean && \
         rm -rf /var/lib/apt/lists/*; \
     elif [ "$TARGETARCH" = "arm" ] && [ "$TARGETVARIANT" = "v7" ]; then \
+        echo "Installing Calibre for ARMv7 using official installer..." && \
         apt-get update && \
-        apt-get install -y xz-utils && \
+        apt-get install -y xz-utils python3 python3-pip libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libxcb-util1 && \
+        # 使用官方安装脚本，但添加更多错误处理 \
         wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | \
-            sh /dev/stdin install_dir=/usr && \
+            sh /dev/stdin install_dir=/usr || \
+        (echo "Fallback: Trying alternative installation method" && \
+         wget -O /tmp/calibre-installer.py https://download.calibre-ebook.com/linux-installer.py && \
+         python3 /tmp/calibre-installer.py --install-dir=/usr --binary-depends) && \
         apt-get clean && \
-        rm -rf /var/lib/apt/lists/* /tmp/calibre-installer-cache; \
+        rm -rf /var/lib/apt/lists/* /tmp/calibre-installer-cache /tmp/calibre-installer.py; \
+    else \
+        echo "Unknown architecture: $TARGETARCH $TARGETVARIANT" && \
+        exit 1; \
     fi
 
-# 条件安装 PyQt5
-RUN if [ "$TARGETARCH" != "arm" ] || [ "$TARGETVARIANT" != "v7" ]; then \
+# 条件安装 PyQt5 - 对于 ARMv7 使用系统包
+RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ]; then \
         pip3 install --no-cache-dir --break-system-packages pyqt5; \
+    elif [ "$TARGETARCH" = "arm" ] && [ "$TARGETVARIANT" = "v7" ]; then \
+        echo "Installing PyQt5 via apt for ARMv7" && \
+        apt-get update && \
+        apt-get install -y python3-pyqt5 python3-pyqt5.qtwebengine && \
+        apt-get clean && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# 验证 Calibre 安装
+RUN echo "Verifying Calibre installation..." && \
+    if command -v calibre > /dev/null 2>&1; then \
+        echo "Calibre installed successfully" && \
+        calibre --version; \
     else \
-        echo "Skipping PyQt5 on ARM32 to avoid compatibility issues"; \
+        echo "Calibre installation failed, trying alternative..." && \
+        # 备用方案：使用 pip 安装 calibre-server \
+        pip3 install --no-cache-dir --break-system-packages calibre-server || \
+        (echo "All Calibre installation methods failed" && exit 1); \
     fi
 
 # 创建应用用户
