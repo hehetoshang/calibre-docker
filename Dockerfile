@@ -40,24 +40,12 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     beautifulsoup4
 
 # 根据架构安装 Calibre - 修复 ARMv7 安装问题
-RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ]; then \
-        echo "Installing Calibre via apt for $TARGETARCH" && \
+RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ] || ([ "$TARGETARCH" = "arm" ] && [ "$TARGETVARIANT" = "v7" ]); then \
+        echo "Installing Calibre via apt for $TARGETARCH $TARGETVARIANT" && \
         apt-get update && \
         apt-get install -y calibre && \
         apt-get clean && \
         rm -rf /var/lib/apt/lists/*; \
-    elif [ "$TARGETARCH" = "arm" ] && [ "$TARGETVARIANT" = "v7" ]; then \
-        echo "Installing Calibre for ARMv7 using official installer..." && \
-        apt-get update && \
-        apt-get install -y xz-utils python3 python3-pip libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libxcb-util1 && \
-        # 使用官方安装脚本，但添加更多错误处理 \
-        wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | \
-            sh /dev/stdin install_dir=/usr || \
-        (echo "Fallback: Trying alternative installation method" && \
-         wget -O /tmp/calibre-installer.py https://download.calibre-ebook.com/linux-installer.py && \
-         python3 /tmp/calibre-installer.py --install-dir=/usr --binary-depends) && \
-        apt-get clean && \
-        rm -rf /var/lib/apt/lists/* /tmp/calibre-installer-cache /tmp/calibre-installer.py; \
     else \
         echo "Unknown architecture: $TARGETARCH $TARGETVARIANT" && \
         exit 1; \
