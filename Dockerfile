@@ -5,7 +5,7 @@ ARG TARGETVARIANT
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
-# 安装基础系统
+# 安装基础系统（包含 PyQt5 系统包）
 RUN apt-get update && \
     apt-get install -y \
         tzdata \
@@ -20,6 +20,11 @@ RUN apt-get update && \
         unzip \
         git \
         ca-certificates \
+        # PyQt5 系统包
+        python3-pyqt5 \
+        python3-pyqt5.qtwebengine \
+        python3-pyqt5.qtsql \
+        python3-pyqt5.qtmultimedia \
         # Calibre 相关依赖
         python3-dateutil \
         python3-cssselect \
@@ -39,7 +44,7 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     requests \
     beautifulsoup4
 
-# 根据架构安装 Calibre - 修复 ARMv7 安装问题
+# 根据架构安装 Calibre
 RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ] || ([ "$TARGETARCH" = "arm" ] && [ "$TARGETVARIANT" = "v7" ]); then \
         echo "Installing Calibre via apt for $TARGETARCH $TARGETVARIANT" && \
         apt-get update && \
@@ -49,17 +54,6 @@ RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ] || ([ "$TARGET
     else \
         echo "Unknown architecture: $TARGETARCH $TARGETVARIANT" && \
         exit 1; \
-    fi
-
-# 条件安装 PyQt5 - 对于 ARMv7 使用系统包
-RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ]; then \
-        pip3 install --no-cache-dir --break-system-packages pyqt5; \
-    elif [ "$TARGETARCH" = "arm" ] && [ "$TARGETVARIANT" = "v7" ]; then \
-        echo "Installing PyQt5 via apt for ARMv7" && \
-        apt-get update && \
-        apt-get install -y python3-pyqt5 python3-pyqt5.qtwebengine && \
-        apt-get clean && \
-        rm -rf /var/lib/apt/lists/*; \
     fi
 
 # 验证 Calibre 安装
@@ -73,6 +67,11 @@ RUN echo "Verifying Calibre installation..." && \
         pip3 install --no-cache-dir --break-system-packages calibre-server || \
         (echo "All Calibre installation methods failed" && exit 1); \
     fi
+
+# 验证 PyQt5 安装
+RUN echo "Verifying PyQt5 installation..." && \
+    python3 -c "import PyQt5; print('PyQt5 imported successfully')" && \
+    python3 -c "import PyQt5.QtWebEngine; print('PyQt5.QtWebEngine imported successfully')"
 
 # 创建应用用户
 RUN useradd -m -u 1000 -s /bin/bash talebook && \
