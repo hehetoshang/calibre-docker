@@ -45,16 +45,11 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     beautifulsoup4
 
 # 根据架构安装 Calibre
-RUN if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ] || ([ "$TARGETARCH" = "arm" ] && [ "$TARGETVARIANT" = "v7" ]); then \
-        echo "Installing Calibre via apt for $TARGETARCH $TARGETVARIANT" && \
-        apt-get update && \
-        apt-get install -y calibre && \
-        apt-get clean && \
-        rm -rf /var/lib/apt/lists/*; \
-    else \
-        echo "Unknown architecture: $TARGETARCH $TARGETVARIANT" && \
-        exit 1; \
-    fi
+RUN echo "Installing Calibre via apt for $TARGETARCH $TARGETVARIANT" && \
+    apt-get update && \
+    apt-get install -y calibre && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*; \
 
 # 验证 Calibre 安装
 RUN echo "Verifying Calibre installation..." && \
@@ -62,10 +57,7 @@ RUN echo "Verifying Calibre installation..." && \
         echo "Calibre installed successfully" && \
         calibre --version; \
     else \
-        echo "Calibre installation failed, trying alternative..." && \
-        # 备用方案：使用 pip 安装 calibre-server \
-        pip3 install --no-cache-dir --break-system-packages calibre-server || \
-        (echo "All Calibre installation methods failed" && exit 1); \
+        echo "Calibre installation failed" \
     fi
 
 # 验证 PyQt5 安装
