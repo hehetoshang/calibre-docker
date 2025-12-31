@@ -74,8 +74,4 @@ RUN useradd -m -u 1000 -s /bin/bash talebook && \
 USER talebook
 WORKDIR /app
 
-# 添加健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:80/ || exit 1
-
 CMD ["/bin/bash"]
