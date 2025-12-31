@@ -37,19 +37,12 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# 安装 Python 包（使用 --break-system-packages）
-RUN pip3 install --no-cache-dir --break-system-packages \
-    flask \
-    sqlalchemy \
-    requests \
-    beautifulsoup4
-
 # 根据架构安装 Calibre
 RUN echo "Installing Calibre via apt for $TARGETARCH $TARGETVARIANT" && \
     apt-get update && \
     apt-get install -y calibre && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*; \
+    rm -rf /var/lib/apt/lists/*
 
 # 验证 Calibre 安装
 RUN echo "Verifying Calibre installation..." && \
@@ -57,13 +50,21 @@ RUN echo "Verifying Calibre installation..." && \
         echo "Calibre installed successfully" && \
         calibre --version; \
     else \
-        echo "Calibre installation failed" \
+        echo "Calibre installation failed" && \
+        exit 1; \
     fi
 
 # 验证 PyQt5 安装
 RUN echo "Verifying PyQt5 installation..." && \
     python3 -c "import PyQt5; print('PyQt5 imported successfully')" && \
     python3 -c "import PyQt5.QtWebEngine; print('PyQt5.QtWebEngine imported successfully')"
+
+# 安装 Python 包（使用 --break-system-packages）
+RUN pip3 install --no-cache-dir --break-system-packages \
+    flask \
+    sqlalchemy \
+    requests \
+    beautifulsoup4
 
 # 创建应用用户
 RUN useradd -m -u 1000 -s /bin/bash talebook && \
@@ -72,5 +73,9 @@ RUN useradd -m -u 1000 -s /bin/bash talebook && \
 
 USER talebook
 WORKDIR /app
+
+# 添加健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:80/ || exit 1
 
 CMD ["/bin/bash"]
