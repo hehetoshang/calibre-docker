@@ -1,4 +1,4 @@
-FROM debian:12
+FROM debian:12-slim
 
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -42,7 +42,7 @@ RUN echo "Installing Calibre via apt for $TARGETARCH $TARGETVARIANT" && \
     apt-get update && \
     apt-get install -y calibre && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/*;
 
 # 验证 Calibre 安装
 RUN echo "Verifying Calibre installation..." && \
